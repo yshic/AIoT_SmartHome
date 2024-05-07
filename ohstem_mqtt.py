@@ -26,6 +26,8 @@ MQTT_TOPIC_PUB2 = MQTT_USERNAME + "/feeds/V2"
 MQTT_TOPIC_SUB2 = MQTT_USERNAME + "/feeds/V2"
 MQTT_TOPIC_PUB3 = MQTT_USERNAME + "/feeds/V3"
 MQTT_TOPIC_SUB3 = MQTT_USERNAME + "/feeds/V3"
+MQTT_TOPIC_PUB15 = MQTT_USERNAME + "/feeds/V15"
+MQTT_TOPIC_SUB15 = MQTT_USERNAME + "/feeds/V15"
 
 def mqtt_connected(client, userdata, flags, rc):
     print("Connected succesfully!!")
@@ -69,47 +71,15 @@ def mqtt_recv_message(client, userdata, message):
 
     df.to_csv('mqtt_messages_log.csv', index=False)
 
-    # If all sensor data has been received, create the output string for tts
+    # If all sensor data has been received, create the output string
     if temperature is not None and humidity is not None and light is not None:
-        output = f"Temperature: {temperature} degree Celcius, Humidity: {humidity} %, Light: {light} %"
-        text_to_speech(output)
+        output = f"Temperature: {temperature} degree Celcius, Humidity: {humidity} %, Light: {light} Lux"
+        mqttClient.publish(MQTT_TOPIC_PUB15, output)
 
         # Reset the sensor data
         temperature = None
         humidity = None
         light = None
-
-def text_to_speech(text):
-    # Convert text to speech
-    tts = gTTS(text=text, lang='en')
-    tts.save("temp.mp3")
-
-    # Convert mp3 file to wav because PyAudio works with wav files
-    os.system('ffmpeg -y -i temp.mp3 temp.wav > NUL 2>&1')
-
-    # Play the wav file
-    chunk = 1024  
-    f = wave.open("temp.wav","rb")  
-    p = pyaudio.PyAudio()  
-    stream = p.open(format = p.get_format_from_width(f.getsampwidth()),  
-                    channels = f.getnchannels(),  
-                    rate = f.getframerate(),  
-                    output = True)  
-    data = f.readframes(chunk)  
-
-    while data:  
-        stream.write(data)  
-        data = f.readframes(chunk)  
-
-    stream.stop_stream()  
-    stream.close()  
-    p.terminate()
-    f.close()
-
-    # Remove the temporary files
-    os.remove("temp.mp3")
-    os.remove("temp.wav")
-
 
 if __name__ == "__main__":
     mqttClient = mqtt.Client()
