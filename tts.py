@@ -2,8 +2,9 @@
 import paho.mqtt.client as mqtt
 import time
 from datetime import datetime
-from gtts import gTTS
 import os
+import re
+from gtts import gTTS
 import pyaudio
 import wave
 
@@ -18,6 +19,8 @@ MQTT_SERVER = "mqtt.ohstem.vn"
 MQTT_PORT = 1883
 MQTT_USERNAME = "1852837"
 MQTT_PASSWORD = ""
+MQTT_TOPIC_PUB12 = MQTT_USERNAME + "/feeds/V12"
+MQTT_TOPIC_SUB12 = MQTT_USERNAME + "/feeds/V12"
 MQTT_TOPIC_PUB13 = MQTT_USERNAME + "/feeds/V13"
 MQTT_TOPIC_SUB13 = MQTT_USERNAME + "/feeds/V13"
 MQTT_TOPIC_PUB14 = MQTT_USERNAME + "/feeds/V14"
@@ -57,18 +60,42 @@ def mqtt_recv_message(client, userdata, message):
     # If message has been received, create the output string for tts
     if AI_message1 != None:
         output = AI_message1
-        text_to_speech(output)
+        text_to_speech(output)    
 
-        # Reset the data
+        # Reset data
         AI_message1 = None
 
-    if AI_command == "Z" and AI_message2 != None:
+    if AI_command == "Z" and AI_message2 != None: # Give sensor data
         output = AI_message2
         text_to_speech(output)
 
         # Reset the data
         AI_command = None
         AI_message2 = None
+
+    if AI_command == "Y" and AI_message2 != None: # Turn on the fan
+        output = AI_message2
+        text_to_speech(output)
+
+        # Reset the data
+        AI_command = None
+        AI_message2 = None
+
+
+    if AI_command == "X" and AI_message2 != None: # Adjust fan speed
+        speed_value = re.findall(r'(\d+)', AI_message2)
+        if speed_value:
+            output = "Fan speed set to " + speed_value[0] + " %"
+            text_to_speech(output)
+            mqttClient.publish(MQTT_TOPIC_PUB12, speed_value[0])
+        else:
+            output = "Invalid command"
+            text_to_speech(output)
+            
+        # Reset the data
+        AI_command = None
+        AI_message2 = None
+        
 
 def text_to_speech(text):
     # Convert text to speech
