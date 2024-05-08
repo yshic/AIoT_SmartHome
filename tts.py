@@ -1,4 +1,3 @@
-#pip install paho-mqtt==1.6.1
 import paho.mqtt.client as mqtt
 import time
 from datetime import datetime
