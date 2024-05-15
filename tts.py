@@ -31,7 +31,7 @@ MQTT_TOPIC_SUB15 = MQTT_USERNAME + "/feeds/V15"
 def mqtt_connected(client, userdata, flags, rc):
     print("Connected succesfully!!")
     client.subscribe(MQTT_TOPIC_SUB13) # Assistance Message in general
-    client.subscribe(MQTT_TOPIC_SUB15) # Assistance Message response to command
+    client.subscribe(MQTT_TOPIC_SUB15) # Assistance Message in response to command
     client.subscribe(MQTT_TOPIC_SUB14) # Assistance Command
 
 def mqtt_subscribed(client, userdata, mid, granted_qos):
@@ -80,7 +80,6 @@ def mqtt_recv_message(client, userdata, message):
         AI_command = None
         AI_message2 = None
 
-
     if AI_command == "X" and AI_message2 != None: # Adjust fan speed
         speed_value = re.findall(r'(\d+)', AI_message2)
         if speed_value:
@@ -91,6 +90,15 @@ def mqtt_recv_message(client, userdata, message):
             output = "Invalid command"
             text_to_speech(output)
             
+        # Reset the data
+        AI_command = None
+        AI_message2 = None
+    
+    if AI_command == "W" and AI_message2 != None: # Turn off the fan
+        output = "Turning off the fan"
+        text_to_speech(output)
+        mqttClient.publish(MQTT_TOPIC_PUB12, "0")
+    
         # Reset the data
         AI_command = None
         AI_message2 = None
