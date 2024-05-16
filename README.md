@@ -4,7 +4,8 @@ An AIoT project that aims to implement features that would help people with disa
 ## Description
 
 ## Components
-- 1 Yolo:bit or 1 micro:bit
+- 1 Yolo:Bit or 1 micro:bit
+- 1 GPIO Expansion board for the Yolo:Bit or the micro:bit
 - 1 Temperature and Humidity sensor
 - 1 Light sensor
 - 1 PIR sensor
