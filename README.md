@@ -17,8 +17,9 @@ An AIoT project that aims to implement features that would help people with disa
 ## Demonstration
 ### Basic features
 To be updated...
-### OhStem Dashboard
-To be updated...
+### IoT Dashboard
+Currently using the built-in dashboard from OhStem, might switch to Adafruit IO or a custom IoT web dashboard in the future.
+![iot_dashboard][/img/iot_dashboard.jpg]
 ### Voice Recognition
 To be updated...
 ### Gesture Control
