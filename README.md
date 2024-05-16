@@ -3,6 +3,10 @@ An AIoT project that aims to implement features that would help people with disa
 
 ## Description
 
+## Components
+- 1 Yolo:bit or 1 micro:bit
+...
+
 ## Demonstration
 ### Basic features
 To be updated...
