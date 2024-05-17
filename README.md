@@ -20,9 +20,11 @@ An AIoT smart home project using various sensors to control home functions and i
 - Showing data from sensors:
   
   **From LCD Display**
-  ![lcd_display](/img/lcd_display.jpg)
+  
+  ![lcd_display](/img/lcd_display.jfif)
   
   **From IoT dashboard**
+  
   ![dashboard_display](/img/dashboard_display.jpg)
 
 To be updated...
