@@ -3,11 +3,6 @@ import time
 import csv
 from datetime import datetime
 import pandas as pd
-import numpy as np
-from gtts import gTTS
-import os
-import pyaudio
-import wave
 
 # global variables
 temperature = None
