@@ -1,4 +1,4 @@
-# AIoT SmartHome
+# AIoT SmartHome (In Progress)
 An AIoT smart home project using various sensors to control home functions and intergrated with AI modules that aim to help people with disability via voice recognition and gesture recognition. This project is part of the course Computer Engineering Project.
 
 ## Description
