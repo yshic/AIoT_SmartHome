@@ -15,6 +15,21 @@ An AIoT smart home project using various sensors to control home functions and i
 - 1 Mini fan
 - 1 IR remote control
 
+## MQTT Topics
+
+|    Topics   |        Description       |
+| ----------- | ------------------------ |
+|      V1     | Temperature              |
+|      V2     | Humidity                 |
+|      V3     | Light level              |
+|      V10    | LED control              |
+|      V11    | LED colors               |
+|      V12    | Fan control              |
+|      V13    | AI response (dashboard)  |
+|      V14    | AI response (Gemini API) |
+|      V15    | AI command               |
+|      V16    | Voice recognition output |
+
 ## Demonstration
 ### Basic features
 - Showing data from sensors:
