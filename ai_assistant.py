@@ -58,7 +58,9 @@ class AIAssistant:
 
     def get_response(self, prompt):
         response = self.chat_session.send_message(prompt)
-        return response.text, self.chat_session.history
+        return response.text
 
-    def end_chat(self):
-        self.chat_session.end_chat()
+if __name__ == "__main__":
+    assistant = AIAssistant()
+    while True:
+        time.sleep(1)
