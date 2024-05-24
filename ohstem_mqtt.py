@@ -1,107 +1,49 @@
 import paho.mqtt.client as mqtt
 import time
-import csv
-from datetime import datetime
-import pandas as pd
 
-# global variables
-temperature = None
-humidity = None
-light = None
-AI_command = None
 
-# MQTT broker details
-MQTT_SERVER = "mqtt.ohstem.vn"
-MQTT_PORT = 1883
-MQTT_USERNAME = "1852837"
-MQTT_PASSWORD = ""
-MQTT_TOPIC_PUB1 = MQTT_USERNAME + "/feeds/V1"
-MQTT_TOPIC_SUB1 = MQTT_USERNAME + "/feeds/V1"
-MQTT_TOPIC_PUB2 = MQTT_USERNAME + "/feeds/V2"
-MQTT_TOPIC_SUB2 = MQTT_USERNAME + "/feeds/V2"
-MQTT_TOPIC_PUB3 = MQTT_USERNAME + "/feeds/V3"
-MQTT_TOPIC_SUB3 = MQTT_USERNAME + "/feeds/V3"
-MQTT_TOPIC_SUB14 = MQTT_USERNAME + "/feeds/V14"
-MQTT_TOPIC_PUB14 = MQTT_USERNAME + "/feeds/V14"
-MQTT_TOPIC_PUB15 = MQTT_USERNAME + "/feeds/V15"
-MQTT_TOPIC_SUB15 = MQTT_USERNAME + "/feeds/V15"
+class MQTTClient:
+    def __init__(self, username, password, server, port, topics, message_callback):
+        self.MQTT_SERVER = server
+        self.MQTT_PORT = port
+        self.MQTT_USERNAME = username
+        self.MQTT_PASSWORD = password
+        self.topics = topics
+        self.message_callback = message_callback
 
-def mqtt_connected(client, userdata, flags, rc):
-    print("Connected succesfully!!")
-    client.subscribe(MQTT_TOPIC_SUB1) # Temperature
-    client.subscribe(MQTT_TOPIC_SUB2) # Humidity
-    client.subscribe(MQTT_TOPIC_SUB3) # Light
-    client.subscribe(MQTT_TOPIC_SUB14) # Assistance Command
 
-def mqtt_subscribed(client, userdata, mid, granted_qos):
-    print("Subscribed to Topic!!!")
+        self.mqttClient = mqtt.Client()
+        self.mqttClient.username_pw_set(self.MQTT_USERNAME, self.MQTT_PASSWORD)
+        self.mqttClient.connect(self.MQTT_SERVER, int(self.MQTT_PORT), 60)
 
-def mqtt_recv_message(client, userdata, message):
-    global temperature, humidity, light, AI_command
+        # Register mqtt events
+        self.mqttClient.on_connect = self.mqtt_connected
+        self.mqttClient.on_subscribe = self.mqtt_subscribed
+        self.mqttClient.on_message = self.mqtt_recv_message
 
-    print(" Received message " + message.payload.decode("utf-8")
-          + " on topic '" + message.topic
-          + "' with QoS " + str(message.qos))
+        self.mqttClient.loop_start()
 
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    data = {'Time': timestamp}
+    def mqtt_connected(self, client, userdata, flags, rc):
+        print("Connected succesfully!!")
+        for topic in self.topics:
+            client.subscribe(self.MQTT_USERNAME + "/feeds/" + topic)
 
-    payload = message.payload.decode("utf-8")
+    def mqtt_subscribed(self, client, userdata, mid, granted_qos):
+            print("Subscribed to Topic!!!")
 
-    if message.topic == MQTT_TOPIC_SUB1:
-        temperature = float(payload)
-    elif message.topic == MQTT_TOPIC_SUB2:
-        humidity = float(payload)
-    elif message.topic == MQTT_TOPIC_SUB3:
-        light = float(payload)
-    elif message.topic == MQTT_TOPIC_SUB14:
-        AI_command = payload
-
-    # logging
-    df = pd.read_csv('mqtt_messages_log.csv')
-    row_index = df.loc[df['Time'] == timestamp].index
-    if row_index.empty:
-        df = pd.concat([df, pd.DataFrame([data])])
-    else:
-        for key in data:
-            df.loc[row_index, key] = data[key]
-
-    # Filter out rows with all-NA values
-    df = df.dropna(how='all')
-
-    df.to_csv('mqtt_messages_log.csv', index=False)
-
-    # If all sensor data has been received, create the output string
-    if AI_command == "Z":
-        if temperature is not None and humidity is not None and light is not None:
-            output = f"Temperature: {temperature} degree Celcius, Humidity: {humidity} %, Light: {light} Lux"
-            mqttClient.publish(MQTT_TOPIC_PUB15, output)
-
-            # Reset the sensor data
-            temperature = None
-            humidity = None
-            light = None
+    def mqtt_recv_message(self, client, userdata, message):
+        payload = message.payload.decode("utf-8")
+        topic = message.topic
+        self.message_callback(self, topic, payload)
         
-        # Reset AI_command
-        AI_command = None
+    def mqtt_publish(self, topic, payload):
+        topic = self.MQTT_USERNAME + "/feeds/" + topic
+        self.mqttClient.publish(topic, payload)
 
 
 if __name__ == "__main__":
-    mqttClient = mqtt.Client()
-    mqttClient.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
-    mqttClient.connect(MQTT_SERVER, int(MQTT_PORT), 60)
-
-    # Create a new CSV file with headers
-    with open('mqtt_messages_log.csv', 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['Time', 'V1', 'V2', 'V3'])
-
-    #Register mqtt events
-    mqttClient.on_connect = mqtt_connected
-    mqttClient.on_subscribe = mqtt_subscribed
-    mqttClient.on_message = mqtt_recv_message
-
-    mqttClient.loop_start()
+    topics = ["V1", "V2", "V3", "V10", "V11", "V12", "V13", "V14", "V15", "V16"]
+    client = MQTTClient("1852837", "", "mqtt.ohstem.vn", 1883, topics)
 
     while True:
         time.sleep(1)
