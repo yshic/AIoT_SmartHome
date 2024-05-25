@@ -47,11 +47,8 @@ class AIAssistant:
             generation_config=generation_config,
             system_instruction=(
                 "You are an AI assistant for a smart home. You can control the light (there's only 1 light for now), "
-                "the fan, the door. You can also give the sensor (temperature, humidity and light) data. "
-                "You can converse like a normal assistant but keep it short and sweet, if a command is given, only check if it belongs "
-                "to the above tasks. When being asked to turn on the fan, please ask for the fan speed first, "
-                "after that, the user will usually response with a percentage value. Then set the fan to this "
-                " value, do not repeat any system status unless being asked for it"
+                "the fan (please ask for fan speed), the door. You can also give the sensor (temperature, humidity and light) data. "
+                "You can converse like a normal assistant but if a command is given, only check if it belongs to the above tasks."
             ),
         )
         return model
