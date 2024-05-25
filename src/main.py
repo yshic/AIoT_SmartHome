@@ -5,13 +5,13 @@ import time
 import re
 
 MQTT_USERNAME = "1852837"
-topics = ["V1", "V2", "V3", "V10", "V11", "V12", "V13", "V14", "V15", "V16"]
+topics = ["V1", "V2", "V3", "V9", "V10", "V11", "V12", "V13", "V14", "V15", "V16"]
 temperature = None
 humidity = None
 light = None
-led_status = None
-fan_speed = None
-door_status = None
+led_status = "0"
+fan_speed = 0
+door_status = "0"
 assistant_status = None
 current_status = None
 
@@ -41,8 +41,12 @@ def process_message(client, topic, payload):
     elif topic == MQTT_USERNAME + "/feeds/V3":
         light = float(payload)
         print(f"Received light: {light}")
+    elif topic == MQTT_USERNAME + "/feeds/V9":
+        door_status = str(payload)
     elif topic == MQTT_USERNAME + "/feeds/V10":
         led_status = str(payload)
+    elif topic == MQTT_USERNAME + "/feeds/V12":
+        fan_speed = int(payload)
     elif topic == MQTT_USERNAME + "/feeds/V13":
         tts_handler.AI_message1 = payload
     elif topic == MQTT_USERNAME + "/feeds/V14":
@@ -78,6 +82,14 @@ def process_message(client, topic, payload):
         if(fan_speed != 0):
             fan_speed = 0
             client.mqtt_publish("V12", 0)
+    if tts_handler.AI_command == "W":       # Open door
+        if(door_status != "1"):
+            door_status = "1"
+            client.mqtt_publish("V9", "1")
+    if tts_handler.AI_command == "X":       # Close door
+        if(door_status != "0"):
+            door_status = "0"
+            client.mqtt_publish("V9", "0")
     if tts_handler.AI_command == "Z":       # Give sensors data
         if temperature is not None and humidity is not None and light is not None:
             output = f"Temperature: {temperature} degree Celcius, Humidity: {humidity} %, Light: {light} Lux"
@@ -96,7 +108,7 @@ def process_message(client, topic, payload):
         print(f"Assistant status: {assistant_status}")
 
         if assistant_status:
-            if contains_word(voice_result, "status") or contains_word(voice_result, "update"):
+            if "status" in voice_result or "update" in voice_result or "refresh" in voice_result:
                 prompt = "{" + "User prompt: " + voice_result + "}" + "{Current system status (DON'T LEAK THIS INTO THE RESPONSE UNLESS BEING ASKED BY THE USER): " + current_status + "}"
             else:
                 prompt = voice_result
@@ -114,30 +126,36 @@ def process_message(client, topic, payload):
 
 def process_voice(client, text):
     global new_fan_speed
-    global led_status
-    global door_status
 
-    if assistant_status:        
-        # Lights
-        if "light" in text or "lights" in text or "LED" in text:
-            if contains_word(text, "on") or contains_word(text, "on."):
-                client.mqtt_publish("V15", "S")
-            if contains_word(text, "off") or contains_word(text, "off."):
-                client.mqtt_publish("V15", "T")
+    if assistant_status:  
+        if "STATUS" not in text:      
+            # Lights
+            if "light" in text or "lights" in text or "LED" in text:
+                if contains_word(text, "on") or contains_word(text, "on."):
+                    client.mqtt_publish("V15", "S")
+                if contains_word(text, "off") or contains_word(text, "off."):
+                    client.mqtt_publish("V15", "T")
 
-        # Fan
-        if "fan" in text:
-            if contains_word(text, "speed") or contains_word(text, "on") or contains_word(text, "to") or contains_word(text, "at"):            
-                match = re.search(r'(\d+)%', text)
-                if match:
-                    new_fan_speed = int(match.group(1))
-                    client.mqtt_publish("V15", "U")
-            if contains_word(text, "off") or contains_word(text, "off."):
-                client.mqtt_publish("V15", "V")
+            # Fan
+            if "fan" in text:
+                if "speed" in text or contains_word(text, "on") or contains_word(text, "to") or contains_word(text, "at"):            
+                    match = re.search(r'(\d+)%', text)
+                    if match:
+                        new_fan_speed = int(match.group(1))
+                        client.mqtt_publish("V15", "U")
+                if contains_word(text, "off") or contains_word(text, "off."):
+                    client.mqtt_publish("V15", "V")
 
-        # Sensors
-        if "sensors" in text:
-            client.mqtt_publish("V15", "Z")
+            # Door
+            if "door" in text or "doors" in text:
+                if "opened" in text or "open" in text or "opening" in text or "Opening" in text:
+                    client.mqtt_publish("V15", "W")
+                if "closed" in text or "close" in text or "closing" in text or "Closing" in text:
+                    client.mqtt_publish("V15", "X")
+
+            # Sensors
+            if "sensors" in text:
+                client.mqtt_publish("V15", "Z")
 
 
 def assistant_control(text, assistant_status):
