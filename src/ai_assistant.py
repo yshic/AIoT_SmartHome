@@ -51,7 +51,7 @@ class AIAssistant:
                 "You can converse like a normal assistant but keep it short and sweet, if a command is given, only check if it belongs "
                 "to the above tasks. When being asked to turn on the fan, please ask for the fan speed first, "
                 "after that, the user will usually response with a percentage value. Then set the fan to this "
-                " value, do not repeat any system status unless being asked for it"
+                " value. When being asked for update on the status of the house, ALWAYS response in the format of: STATUS: ..."
             ),
         )
         return model
