@@ -91,7 +91,7 @@ class GestureControl:
         return self.capture
 
     def get_result(self):
-            return self.result
+        return self.result
 
 
 if __name__ == "__main__":

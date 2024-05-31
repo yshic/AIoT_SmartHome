@@ -4,13 +4,6 @@ import math
 
 
 class HandDetection:
-    """
-    Finds Hands using the mediapipe library. Exports the landmarks
-    in pixel format. Adds extra functionalities like finding how
-    many fingers are up or the distance between two fingers. Also
-    provides bounding box info of the hand found.
-    """
-
     def __init__(self, staticMode=False, maxHands=2, modelComplexity=1, detectionCon=0.5, minTrackCon=0.5):
         self.staticMode = staticMode
         self.maxHands = maxHands
@@ -30,12 +23,6 @@ class HandDetection:
         self.lmList = []
 
     def findHands(self, img, draw=True, flipType=True):
-        """
-        Finds hands in a BGR image.
-        :param img: Image to find the hands in.
-        :param draw: Flag to draw the output on the image.
-        :return: Image with or without drawings
-        """
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(imgRGB)
         allHands = []
@@ -87,11 +74,6 @@ class HandDetection:
         return allHands, img
 
     def fingersUp(self, myHand):
-        """
-        Finds how many fingers are open and returns in a list.
-        Considers left and right hands separately
-        :return: List of which fingers are up
-        """
         fingers = []
         myHandType = myHand["type"]
         myLmList = myHand["lmList"]
@@ -135,18 +117,12 @@ class HandDetection:
 def main():
     cap = cv2.VideoCapture(0)
 
-    # Initialize the HandDetector class with the given parameters
     detector = HandDetection(staticMode=False, maxHands=2, modelComplexity=1, detectionCon=0.5, minTrackCon=0.5)
 
-    # Continuously get frames from the webcam
     while True:
-        # Capture each frame from the webcam
-        # 'success' will be True if the frame is successfully captured, 'img' will contain the frame
         success, img = cap.read()
 
         # Find hands in the current frame
-        # The 'draw' parameter draws landmarks and hand outlines on the image if set to True
-        # The 'flipType' parameter flips the image, making it easier for some detections
         hands, img = detector.findHands(img, draw=True, flipType=True)
 
         # Check if any hands are detected
@@ -159,7 +135,7 @@ def main():
 
             # Count the number of fingers up for the first hand
             fingers1 = detector.fingersUp(hand1)
-            print(f'H1 = {fingers1.count(1)}', end=" ")  # Print the count of fingers that are up
+            print(f'H1 = {fingers1.count(1)}', end=" ")
 
             # Calculate distance between specific landmarks on the first hand and draw it on the image
             length, info, img = detector.findDistance(lmList1[8][0:2], lmList1[12][0:2], img, color=(255, 0, 255),
@@ -167,7 +143,6 @@ def main():
 
             # Check if a second hand is detected
             if len(hands) == 2:
-                # Information for the second hand
                 hand2 = hands[1]
                 lmList2 = hand2["lmList"]
                 bbox2 = hand2["bbox"]
