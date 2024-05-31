@@ -6,15 +6,15 @@ import time
 class AIAssistant:
     def __init__(self, api_key=None):
         self.api_key = api_key or os.environ.get("GOOGLE_API_KEY")
-        self._configure_api()
-        self.model = self._create_model()
-        self.chat_session = self._start_chat()
+        self.configure_api()
+        self.model = self.create_model()
+        self.chat_session = self.start_chat()
 
 
-    def _configure_api(self):
+    def configure_api(self):
         genai.configure(api_key=self.api_key)
 
-    def _create_model(self):
+    def create_model(self):
         generation_config = {
         "temperature": 0.8,
         "top_p": 0.95,
@@ -62,7 +62,7 @@ class AIAssistant:
         )
         return model
 
-    def _start_chat(self):
+    def start_chat(self):
         return self.model.start_chat(history=[])
 
     def get_response(self, prompt):
