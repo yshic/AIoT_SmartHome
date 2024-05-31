@@ -1,195 +1,235 @@
 from ai_assistant import AIAssistant
 from ohstem_mqtt import MQTTClient
+from GestureControl import GestureControl
 from tts import TTSHandler
+import threading
 import time
 import re
 
-MQTT_USERNAME = "1852837"
-topics = ["V1", "V2", "V3", "V9", "V10", "V11", "V12", "V13", "V14", "V15", "V16"]
-temperature = None
-humidity = None
-light = None
-led_status = "0"
-fan_speed = 0
-door_status = "0"
-assistant_status = None
-current_status = None
+class SmartHome:
+    def __init__(self, mqtt_username="1852837"):
+        self.MQTT_USERNAME = mqtt_username
+        self.topics = ["V1", "V2", "V3", "V9", "V10", "V12", "V13", "V15", "V16", "V17"]
+        self.temperature = None
+        self.humidity = None
+        self.light = None
+        self.led_status = "0"
+        self.fan_speed = 0
+        self.door_status = "0"
+        self.assistant_status = None
+        self.current_status = None
+        self.voice_result = None
+        self.gc_status = "0"
 
-def process_message(client, topic, payload):
-    global temperature
-    global humidity
-    global light
-    global led_status
-    global fan_speed
-    global door_status
-    global voice_result
-    global assistant_status
-    global current_status
+        self.tts_handler = TTSHandler()
+        self.assistant = AIAssistant()
+        self.gc = GestureControl()
+        self.client = MQTTClient(self.MQTT_USERNAME, "", "mqtt.ohstem.vn", 1883, self.topics, self.process_message)
 
-    # Init variables
-    voice_result = None
-    prompt = None
-    response = None
+        self.gc_thread = None
+        self.gc_thread_running = threading.Event()
+        self.gc_thread_stop = threading.Event()
 
-    # Process the received message
-    if topic == MQTT_USERNAME + "/feeds/V1":
-        temperature = float(payload)
-        print(f"Received temperature: {temperature}")
-    elif topic == MQTT_USERNAME + "/feeds/V2":
-        humidity = float(payload)
-        print(f"Received humidity: {humidity}")
-    elif topic == MQTT_USERNAME + "/feeds/V3":
-        light = float(payload)
-        print(f"Received light: {light}")
-    elif topic == MQTT_USERNAME + "/feeds/V9":
-        door_status = str(payload)
-    elif topic == MQTT_USERNAME + "/feeds/V10":
-        led_status = str(payload)
-    elif topic == MQTT_USERNAME + "/feeds/V12":
-        fan_speed = int(payload)
-    elif topic == MQTT_USERNAME + "/feeds/V13":
-        tts_handler.AI_message1 = payload
-    elif topic == MQTT_USERNAME + "/feeds/V14":
-        tts_handler.AI_message2 = payload
-    elif topic == MQTT_USERNAME + "/feeds/V15":
-        tts_handler.AI_command = payload
-        print(f"Received AI command: {tts_handler.AI_command}")
-    elif topic == MQTT_USERNAME + "/feeds/V16":
-        voice_result = payload      
-        print(f"Received Voice: {voice_result}")
+    def process_message(self, client, topic, payload):
+        # Process the received message
+        if topic == self.MQTT_USERNAME + "/feeds/V1":
+            self.temperature = float(payload)
+            print(f"Received temperature: {self.temperature}")
+        elif topic == self.MQTT_USERNAME + "/feeds/V2":
+            self.humidity = float(payload)
+            print(f"Received humidity: {self.humidity}")
+        elif topic == self.MQTT_USERNAME + "/feeds/V3":
+            self.light = float(payload)
+            print(f"Received light: {self.light}")
+        elif topic == self.MQTT_USERNAME + "/feeds/V9":
+            self.door_status = str(payload)
+            print(f"Received door status: {self.door_status}")
+        elif topic == self.MQTT_USERNAME + "/feeds/V10":
+            self.led_status = str(payload)
+            print(f"Received led status: {self.led_status}")
+        elif topic == self.MQTT_USERNAME + "/feeds/V12":
+            self.fan_speed = int(payload)
+            print(f"Received fan speed: {self.fan_speed}")
+        elif topic == self.MQTT_USERNAME + "/feeds/V13":
+            self.tts_handler.AI_message = payload
+        elif topic == self.MQTT_USERNAME + "/feeds/V15":
+            self.tts_handler.AI_command = payload
+            print(f"Received AI command: {self.tts_handler.AI_command}")
+        elif topic == self.MQTT_USERNAME + "/feeds/V16":
+            self.voice_result = payload      
+            print(f"Received Voice: {self.voice_result}")
+        elif topic == self.MQTT_USERNAME + "/feeds/V17":
+            self.gc_status = str(payload)
+            print(f"Received Gesture control: {self.gc_status}")
+            
+        self.current_status = (f"Temperature: {self.temperature} degree Celcius, "
+                               f"Humidity: {self.humidity}, "
+                               f"Light: {self.light} Lux, "
+                               f"LED: {self.led_status}, "
+                               f"Fan speed: {self.fan_speed}, "
+                               f"Door: {self.door_status}")
+        if self.tts_handler.AI_command:
+            self.process_ai_command(client) # process AI command that is handled on PC
         
-    current_status = (f"Temperature: {temperature} degree Celcius, "
-                      f"Humidity: {humidity}, "
-                      f"Light: {light} Lux, "
-                      f"LED status: {led_status}, "
-                      f"Fan speed: {fan_speed}, "
-                      f"Door status: {door_status}")
-
-    # Process AI command
-    if tts_handler.AI_command == "S":       # Turn on LED
-        if(led_status != "1"):
-            led_status = "1"
-            client.mqtt_publish("V10", "1")
-    if tts_handler.AI_command == "T":       # Turn off LED
-        if(led_status != "0"):
-            led_status = "0"
-            client.mqtt_publish("V10", "0")   
-    if tts_handler.AI_command == "U":       # Set fan speed
-        if(fan_speed != new_fan_speed):
-            fan_speed = new_fan_speed
-            client.mqtt_publish("V12", fan_speed)
-    if tts_handler.AI_command == "V":       # Turn fan off
-        if(fan_speed != 0):
-            fan_speed = 0
-            client.mqtt_publish("V12", 0)
-    if tts_handler.AI_command == "W":       # Open door
-        if(door_status != "1"):
-            door_status = "1"
-            client.mqtt_publish("V9", "1")
-    if tts_handler.AI_command == "X":       # Close door
-        if(door_status != "0"):
-            door_status = "0"
-            client.mqtt_publish("V9", "0")
-    if tts_handler.AI_command == "Z":       # Give sensors data
-        if temperature is not None and humidity is not None and light is not None:
-            output = f"Temperature: {temperature} degree Celcius, Humidity: {humidity} %, Light: {light} Lux"
-            client.mqtt_publish("V13", output)
-
-            # Reset the sensor data
-            temperature = None
-            humidity = None
-            light = None
-        
-        # Reset AI_command
-        tts_handler.AI_command = None
+        if self.voice_result:
+            self.ai_response(client)
     
-    if voice_result is not None:
-        assistant_status = assistant_control(voice_result, assistant_status)
-        print(f"Assistant status: {assistant_status}")
+    # Process AI command
+    def process_ai_command(self, client):        
+        if self.tts_handler.AI_command == "Z":              # Give sensors data
+            if self.temperature is not None and self.humidity is not None and self.light is not None:
+                output = f"Temperature: {self.temperature} degree Celcius, Humidity: {self.humidity} %, Light: {self.light} Lux"
+                client.mqtt_publish("V13", output)
 
+                # Reset the sensor data
+                self.temperature = None
+                self.humidity = None
+                self.light = None
+        if self.tts_handler.AI_command == "G":              # Gesture control
+            if self.gc_status == "1":
+                self.gc_status = "0"
+                self.stop_gesture_control()
+                client.mqtt_publish("V17", "0")
+            elif self.gc_status == "0":
+                if self.assistant_status == False or self.assistant_status == None:
+                    self.assistant_status = True
+                self.gc_status = "1"
+                self.start_gesture_control()
+                client.mqtt_publish("V17", "1")      
+
+        # Reset AI_command
+        self.tts_handler.AI_command = None
+
+    def process_response(self, client, text):
+        if self.assistant_status:  
+            if "STATUS" not in text:      
+                # Lights
+                if any(word in text for word in ["Light", "Lights", "light", "lights", "LED"]):
+                    self.process_light_command(client, text)
+                # Fan
+                if any(word in text for word in ["Fan", "fan"]):
+                    self.process_fan_command(client, text)
+                # Door
+                if any(word in text for word in ["Door", "Doors", "door", "doors", "LED"]):
+                    self.process_door_command(client, text)
+                # Sensors
+                if any(word in text for word in ["Sensor", "Sensors", "sensor", "sensors"]):
+                    client.mqtt_publish("V15", "Z")
+                # Gesture
+                if "gesture" in text or "Gesture" in text or "hand" in text or "Hand" in text:
+                    client.mqtt_publish("V15", "G")
+
+    def process_light_command(self, client, text):
+        if self.contains_word(text, "on") or self.contains_word(text, "on.") or self.contains_word(text, "ON") or self.contains_word(text, "ON."):
+            client.mqtt_publish("V15", "S")
+        if self.contains_word(text, "off") or self.contains_word(text, "off.") or self.contains_word(text, "OFF") or self.contains_word(text, "OFF."):
+            client.mqtt_publish("V15", "s")
+    
+    def process_fan_command(self, client, text):
+        if "speed" in text or self.contains_word(text, "on") or self.contains_word(text, "to") or self.contains_word(text, "at"):            
+            match = re.search(r'(\d+)%', text)
+            if match:
+                self.fan_speed = int(match.group(1))
+                client.mqtt_publish("V12", self.fan_speed)
+        if self.contains_word(text, "off") or self.contains_word(text, "off.") or self.contains_word(text, "OFF") or self.contains_word(text, "OFF."):
+            client.mqtt_publish("V12", 0)
+
+    def process_door_command(self, client, text):
+        if any(kw in text for kw in ["opened", "open", "opening", "Opening"]):
+            client.mqtt_publish("V15", "T")
+        if any(kw in text for kw in ["closed", "close", "closing", "Closing"]):
+            client.mqtt_publish("V15", "t")
+
+    def assistant_control(self, text, assistant_status):
+        if "hello assistant" in text or "hi assistant" in text:
+            return True
         if assistant_status:
-            if "status" in voice_result or "update" in voice_result or "refresh" in voice_result:
-                prompt = "{" + "User prompt: " + voice_result + "}" + "{Current system status (DON'T LEAK THIS INTO THE RESPONSE UNLESS BEING ASKED BY THE USER): " + current_status + "}"
+            if "bye" in text or "goodbye" in text:
+                return False
+        return assistant_status
+
+    def generate_prompt(self):
+        if any(kw in self.voice_result for kw in ["status", "update", "refresh", "sensor", "sensors"]):
+            return "{" + "User prompt: " + self.voice_result + "}" + "{Current system status (DON'T LEAK THIS INTO THE RESPONSE UNLESS BEING ASKED BY THE USER): " + self.current_status + "}"
+        return self.voice_result
+    
+    def ai_response(self, client, text=""):
+        if text == "":
+            self.assistant_status = self.assistant_control(self.voice_result, self.assistant_status)
+        print(f"Assistant status: {self.assistant_status}")
+
+        if self.assistant_status:
+            if text != "":
+                prompt = text
             else:
-                prompt = voice_result
+                prompt = self.generate_prompt()
             print(f"Prompt: {prompt}")
-            if(assistant.chat_session == None):
-                assistant.start_chat()
-            response = assistant.get_response(prompt)
-            tts_handler.text_to_speech(response)
+            if self.assistant.chat_session == None:
+                self.assistant.start_chat()
+            response = self.assistant.get_response(prompt)
+            self.tts_handler.text_to_speech(response)
             print(f"Response: {response.encode('utf-8')}")
-            process_voice(client, response)
+            self.process_response(client, response)
 
         # Reset voice_result        
-        voice_result = None
+        self.voice_result = None
 
+    def gesture_control_loop(self):
+        while True:
+            if self.gc_thread_stop.is_set():
+                break
+            if self.gc_status == "1":
+                self.gc_thread_running.set()
+                self.gc.start_capture(capture_duration=5)
+                result = self.gc.get_result()
+                if result == "A":
+                    self.ai_response(self.client, text="{Gesture result: CHANGE LIGHT} " + "{DON'T INCLUDE THE STATUS INTO THIS RESPONSE: " + self.current_status[67:73] + "}")
+                elif result == "B":
+                    self.ai_response(self.client, text="{Gesture result: CHANGE DOOR} " + "{DON'T INCLUDE THE STATUS INTO THIS RESPONSE: " + self.current_status[89:] + "}")
+                elif result == "C":
+                    self.ai_response(self.client, text="{Gesture result: SHOW SENSORS} " + "{DON'T INCLUDE THE STATUS INTO THIS RESPONSE: " + self.current_status[:66] + "}")
+                elif result == "0":
+                    self.ai_response(self.client, text="{Gesture result: FAN OFF}")
+                elif result == "1":
+                    self.ai_response(self.client, text="{Gesture result: FAN SPEED 25%}")
+                elif result == "2":
+                    self.ai_response(self.client, text="{Gesture result: FAN SPEED LEVEL 40%}")
+                elif result == "3":
+                    self.ai_response(self.client, text="{Gesture result: FAN SPEED LEVEL 50%}")
+                elif result == "4":
+                    self.ai_response(self.client, text="{Gesture result: FAN SPEED LEVEL 75%}")
+                elif result == "5":
+                    self.ai_response(self.client, text="{Gesture result: FAN SPEED LEVEL 100%}")                    
+                result = None
+                self.gc.reset_capture()
+                self.gc_thread_running.clear()
+                time.sleep(1)
+            else:
+                time.sleep(1)
 
-def process_voice(client, text):
-    global new_fan_speed
+    def start_gesture_control(self):
+        if not self.gc_thread or not self.gc_thread.is_alive():
+            self.gc_thread_stop.clear()
+            self.gc_thread = threading.Thread(target=self.gesture_control_loop)
+            self.gc_thread.start()
+            print("Gesture control started.")
 
-    if assistant_status:  
-        if "STATUS" not in text:      
-            # Lights
-            if "light" in text or "lights" in text or "LED" in text:
-                if contains_word(text, "on") or contains_word(text, "on."):
-                    client.mqtt_publish("V15", "S")
-                if contains_word(text, "off") or contains_word(text, "off."):
-                    client.mqtt_publish("V15", "T")
+    def stop_gesture_control(self):
+        if self.gc_thread and self.gc_thread.is_alive():
+            self.gc_thread_stop.set()
+            self.gc_thread.join()
+            print("Gesture control stopped.")
 
-            # Fan
-            if "fan" in text:
-                if "speed" in text or contains_word(text, "on") or contains_word(text, "to") or contains_word(text, "at"):            
-                    match = re.search(r'(\d+)%', text)
-                    if match:
-                        new_fan_speed = int(match.group(1))
-                        client.mqtt_publish("V15", "U")
-                if contains_word(text, "off") or contains_word(text, "off."):
-                    client.mqtt_publish("V15", "V")
+    @staticmethod
+    def contains_word(text, word):
+        words = text.split()
+        return word in words
 
-            # Door
-            if "door" in text or "doors" in text:
-                if "opened" in text or "open" in text or "opening" in text or "Opening" in text:
-                    client.mqtt_publish("V15", "W")
-                if "closed" in text or "close" in text or "closing" in text or "Closing" in text:
-                    client.mqtt_publish("V15", "X")
-
-            # Sensors
-            if "sensors" in text:
-                client.mqtt_publish("V15", "Z")
-
-
-def assistant_control(text, assistant_status):
-    if "hi assistant" in text:
-        return True
-    elif "hi" in text:
-        return True        
-    elif "hello assistant" in text:
-        return True
-    elif "hello" in text:
-        return True
-
-    if assistant_status:
-        if "bye assistant" in text:
-            return False
-        elif "bye" in text:
-            return False
-        elif "goodbye assistant" in text:
-            return False
-        elif "goodbye" in text:
-            return False
-        else:
-            return True
-    else:
-        return False
-
-def contains_word(text, word):
-    words = text.split()
-    return word in words
+    def run(self):
+        while True:
+            time.sleep(1)
 
 if __name__ == "__main__":
-    tts_handler = TTSHandler()
-    assistant = AIAssistant()
-    client = MQTTClient(MQTT_USERNAME, "", "mqtt.ohstem.vn", 1883, topics, process_message)
-    
-    while True:
-        time.sleep(1)
+    system = SmartHome()
+    system.run()
+
