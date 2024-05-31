@@ -4,13 +4,6 @@ import math
 
 
 class HandDetection:
-    """
-    Finds Hands using the mediapipe library. Exports the landmarks
-    in pixel format. Adds extra functionalities like finding how
-    many fingers are up or the distance between two fingers. Also
-    provides bounding box info of the hand found.
-    """
-
     def __init__(self, staticMode=False, maxHands=2, modelComplexity=1, detectionCon=0.5, minTrackCon=0.5):
         self.staticMode = staticMode
         self.maxHands = maxHands
@@ -30,12 +23,6 @@ class HandDetection:
         self.lmList = []
 
     def findHands(self, img, draw=True, flipType=True):
-        """
-        Finds hands in a BGR image.
-        :param img: Image to find the hands in.
-        :param draw: Flag to draw the output on the image.
-        :return: Image with or without drawings
-        """
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(imgRGB)
         allHands = []
@@ -87,11 +74,6 @@ class HandDetection:
         return allHands, img
 
     def fingersUp(self, myHand):
-        """
-        Finds how many fingers are open and returns in a list.
-        Considers left and right hands separately
-        :return: List of which fingers are up
-        """
         fingers = []
         myHandType = myHand["type"]
         myLmList = myHand["lmList"]
