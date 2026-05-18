@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import tensorflow
 
-
 class Classifier:
     def __init__(self, modelpath, labelspath=None):
         self.model_path = modelpath
@@ -45,9 +44,14 @@ class Classifier:
 
 
 if __name__ == "__main__":
+    import os
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(current_script_dir, "model")
+
     cap = cv2.VideoCapture(2)
-    path = "C:/Users/USER/Documents/maskModel/"
-    maskClassifier = Classifier(f'{path}/keras_model.h5', f'{path}/labels.txt')
+
+    maskClassifier = Classifier(os.path.join(path, "keras_model.h5"),
+                                os.path.join(path, "labels.txt"))
 
     while True:
         _, img = cap.read()
